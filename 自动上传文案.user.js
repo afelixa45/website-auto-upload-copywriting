@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         网站自动上传文案 2.0.0
+// @name         网站自动上传文案 2.1.0
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0
+// @version      2.1.0
 // @description  创建一个按钮来自动上传文案，并实时更新进度条
 // @author       name
 // @match        https://showzstore.com/manage/?m=products&a=products&d=edit
@@ -402,8 +402,54 @@
                 { key: 'description_en', label: '产品描述' }
             ],
             defaultValue: 'Others'
+        },
+
+        'Hot Categories': {
+            systemPrompt: '你是一个专业的玩具和模型分类专家。根据产品标题和描述，从给定的热门分类选项中选择最合适的一项。只返回选项列表中存在的完整名称，不要包含任何解释。',
+            userPromptPrefix: '请分析以下产品信息并选择最合适的热门分类：',
+            rules: `注意事项：
+1. 必须从上述列表中精确选择一个名称
+2. 变形金刚、高达、机甲等机器人类产品选择 "Mecha Robot"
+3. 动漫周边选择 "Anime/Comics"
+4. 美少女手办/机娘选择 "Bishoujo & Mecha Girl"
+5. 漫威/DC 等超级英雄选择 "Superheroes"
+6. 军事模型选择 "Military"
+7. 怪兽/恐怖类选择 "Monsters/Myth & Horror"
+8. 游戏周边选择 "Games"
+9. 电影/电视剧周边选择 "Movies & TV"
+10. 原创设计师玩具选择 "Original/Designer Toys"
+11. 如果没有明确对应，返回 "Mecha Robot"
+12. 返回时必须使用与列表中完全相同的名称`,
+            inputFields: [
+                { key: 'product_title', label: '产品标题' },
+                { key: 'description_en', label: '产品描述', truncate: 200 }
+            ],
+            defaultValue: 'Mecha Robot'
         }
     };
+
+    // ================= 标签别名映射（兼容 SZ / GD 不同属性标签） =================
+
+    const LABEL_ALIASES = {
+        'Theme':          ['Theme'],
+        'Hot Categories': ['Hot Categories'],
+        'Product Type':   ['Product Type'],
+        'Company':        ['Company', 'Brand'],
+        'Character':      ['Character'],
+        'Featured In':    ['Featured In'],
+        'Size':           ['Size'],
+        'Scale':          ['Scale'],
+        'Availability':   ['Availability']
+    };
+
+    function findAttrContainer(labels, attrName) {
+        const aliases = LABEL_ALIASES[attrName] || [attrName];
+        for (const alias of aliases) {
+            const found = Array.from(labels).find(l => l.textContent.includes(alias));
+            if (found) return found.closest('div.rows');
+        }
+        return null;
+    }
 
     // ================= Availability 处理（纯规则逻辑，不用 AI） =================
 
@@ -614,25 +660,26 @@
                 const labels = document.querySelectorAll('div.rows label');
 
                 // Availability（纯规则逻辑）
-                const availabilityLabel = Array.from(labels).find(label => label.textContent.includes('Availability:'));
-                const availabilityContainer = availabilityLabel?.closest('div.rows');
+                const availabilityContainer = findAttrContainer(labels, 'Availability');
                 if (availabilityContainer) {
-                    console.log('找到Availability容器');
+                    console.log('找到 Availability 容器');
                     await handleAvailabilitySelection(data, availabilityContainer);
                 } else {
-                    console.log('未找到Availability容器');
+                    console.log('未找到 Availability 容器');
                 }
 
-                // 6 个 AI 属性统一循环处理
-                const AI_ATTRIBUTES = ['Theme', 'Product Type', 'Company', 'Character', 'Featured In', 'Size', 'Scale'];
+                // AI 属性统一循环处理（SZ + GD 全集，缺失的自动跳过）
+                const AI_ATTRIBUTES = [
+                    'Theme', 'Hot Categories', 'Product Type', 'Company',
+                    'Character', 'Featured In', 'Size', 'Scale'
+                ];
                 for (const attrName of AI_ATTRIBUTES) {
-                    const attrLabel = Array.from(labels).find(l => l.textContent.includes(`${attrName}:`) || l.textContent.trim() === attrName);
-                    const attrContainer = attrLabel?.closest('div.rows');
-                    if (attrContainer) {
+                    const attrContainer = findAttrContainer(labels, attrName);
+                    if (attrContainer && AI_ATTRIBUTE_CONFIGS[attrName]) {
                         console.log(`找到 ${attrName} 容器`);
                         await handleAIAttributeSelection(attrName, AI_ATTRIBUTE_CONFIGS[attrName], data, attrContainer);
                     } else {
-                        console.log(`未找到 ${attrName} 容器`);
+                        console.log(`未找到 ${attrName} 容器（跳过）`);
                     }
                 }
             }

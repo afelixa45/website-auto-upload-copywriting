@@ -114,15 +114,24 @@ class SzClient:
     # ---------- 登录 ----------
 
     def ensure_logged_in(self) -> None:
-        """确保已登录。session 失效则走账密登录。"""
+        """确保已登录。session 失效则走账密登录。goto 超时 60s + 一次重试。"""
         assert self.page is not None
-        self.page.goto(self.config.add_product_url, wait_until="domcontentloaded")
+        self._goto_with_retry(self.config.add_product_url)
         if self._is_login_page():
             logger.info("检测到未登录，执行账号密码登录")
             self._perform_login()
-            self.page.goto(self.config.add_product_url, wait_until="domcontentloaded")
+            self._goto_with_retry(self.config.add_product_url)
         if self._is_login_page():
             raise SzClientError("登录失败，仍停留在登录页")
+
+    def _goto_with_retry(self, url: str, timeout: int = 60000) -> None:
+        """带一次重试的 goto，超时 60s。"""
+        assert self.page is not None
+        try:
+            self.page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+        except PWTimeout:
+            logger.warning("页面加载超时（%ds），重试一次", timeout // 1000)
+            self.page.goto(url, wait_until="domcontentloaded", timeout=timeout)
 
     def _is_login_page(self) -> bool:
         assert self.page is not None
@@ -133,7 +142,7 @@ class SzClient:
 
     def _perform_login(self) -> None:
         assert self.page is not None
-        self.page.goto(self.config.login_url, wait_until="domcontentloaded")
+        self._goto_with_retry(self.config.login_url)
         user_sel = self._find_first(
             [
                 "input[name='UserName']",
@@ -570,6 +579,29 @@ class SzClient:
             logger.info("主图 PicPath[] 回填: %s", pic_val)
         except PWTimeout:
             logger.warning("等待 PicPath[] 回填超时（30s），主图可能未上传成功")
+            self._dismiss_photo_popup()
+
+    def _dismiss_photo_popup(self) -> None:
+        """主图上传弹窗超时未关时，主动关掉弹窗 + 背景遮罩，避免拦截后续所有点击。"""
+        assert self.page is not None
+        dismissed = self.page.evaluate(
+            """() => {
+                let closed = false;
+                const popup = document.querySelector('.pop_form.photo_choice');
+                if (popup && popup.style.display !== 'none') {
+                    popup.style.display = 'none';
+                    closed = true;
+                }
+                const mask = document.getElementById('div_mask');
+                if (mask && mask.style.display !== 'none') {
+                    mask.style.display = 'none';
+                    closed = true;
+                }
+                return closed;
+            }"""
+        )
+        if dismissed:
+            logger.info("主图弹窗 + 遮罩已手动关闭（避免遮挡后续操作）")
 
     def _find_photo_choice_iframe(
         self, obj: str, timeout_ms: int = 10000

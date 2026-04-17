@@ -4,7 +4,7 @@
 
 ### Docs
 - README + memory 补充"已知限制：`--headless` 独立运行会卡死"说明
-- 明确独立入口 `sz_upload.py` 走 `pause_for_manual_save` 等用户关窗，无头场景必须通过「新品上架链」的 `site_draft.py` 调用（补齐了"点【后台】+ 搜 ProId"闭环）
+- 明确独立入口 `sz_upload.py` 走 `pause_for_manual_save` 等用户关窗，无头场景必须通过「暗源新品上架链」的 `site_draft.py` 调用（补齐了"点【后台】+ 搜 ProId"闭环）
 - 无代码变化，版本号不递增
 
 ## [3.1.0] - 2026-04-14
@@ -13,7 +13,7 @@
 - **主图 iframe 真实上传**（`sz_client._upload_main_image`）：点 `#PicUpload_0` → 定位 photo choice iframe（URL 匹配 `d=choice&obj=PicUpload_0&iframe=1`）→ `set_input_files` 注入预处理过的方图 → 等 `PicPath[]` 被回填。SZ 的 "本地上传" 走 jQuery file_upload 插件，set 文件即触发 XHR 上传 + iframe 自动关闭，全程不需要点 `#button_add`
 - **listing 图 HTTP 并发上传**（`sz_client._upload_listings_http`）：从 Playwright context 导出 cookies 到 `requests.Session`，POST 到 `?do_action=action.file_upload_plugin&size=editor`（这是 SZ 描述图的合法端点，油猴脚本 hook 的底层 XHR 也是它）→ 拿回 CDN URL 列表
 - **描述 HTML 拼接**（`_compose_description`）：纯英文描述文本 + listing CDN URL 拼成 `<br/><br/><img src="..." alt="...">`，一次性塞进 CKEditor
-- **image_processor.py**：从新品上架链 port 来的 PIL 图片处理。主图 500² 居中正方形 + SZ logo 水印（临时文件路径供 Playwright）；listing 850px 宽 + 水印（字节供 HTTP 上传）。`build_bundle(sku, site)` 一站式从桌面 `*<SKU>*/` 找原图目录（启发式优先 `原图/`）
+- **image_processor.py**：从暗源新品上架链 port 来的 PIL 图片处理。主图 500² 居中正方形 + SZ logo 水印（临时文件路径供 Playwright）；listing 850px 宽 + 水印（字节供 HTTP 上传）。`build_bundle(sku, site)` 一站式从桌面 `*<SKU>*/` 找原图目录（启发式优先 `原图/`）
 - **GD 通道** (`--site gd`)：`SzConfig` 新增 `site` 字段，`base_url` / `upload_endpoint` 从 `add_product_url` 自动派生；`sz_upload.py` 的 `load_config(site)` 按前缀 `SZ_`/`GD_` 读取 `.env`；登录态持久化分文件 `session/{site}_storage.json` 避免串扰
 - `--no-images` 开关：跳过图片处理只填文本（调试用）
 - `.env.example` 新增 `GD_USERNAME` / `GD_PASSWORD` / `GD_LOGIN_URL` / `GD_ADD_PRODUCT_URL`

@@ -1,6 +1,6 @@
 """图片预处理：桌面产品文件夹 → 主图方图+水印 / listing 850w+水印。
 
-配置与「新品上架链/sz_listing.py」的 process_images 保持一致，两项目结果对齐。
+配置与「暗源新品上架链/sz_listing.py」的 process_images 保持一致，两项目结果对齐。
 Logo 跨项目引用 `../网站图片上传/logos/{SZ,GD}_logo.png`。
 
 主图返回临时文件路径（供 Playwright `set_input_files`），
@@ -23,7 +23,7 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-# 处理参数（对齐油猴脚本 v2.1.0 + 新品上架链 sz_listing.py）
+# 处理参数（对齐油猴脚本 v2.1.0 + 暗源新品上架链 sz_listing.py）
 MAIN_IMAGE_SIZE = 500
 LISTING_MAX_WIDTH = 850
 LOGO_MARGIN = 5

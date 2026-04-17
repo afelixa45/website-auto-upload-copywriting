@@ -20,8 +20,16 @@ python3 sz_upload.py <SKU>                    # SZ，桌面按 SKU 搜
 python3 sz_upload.py "<docx>" <SKU>           # SZ，显式指定 docx
 python3 sz_upload.py --site gd <SKU>          # GundamIT 站
 python3 sz_upload.py <SKU> --no-images        # 跳过图片，调试用
-python3 sz_upload.py <SKU> --headless         # 无头模式
+python3 sz_upload.py <SKU> --headless         # ⚠️ 见下方"已知限制"，独立跑会卡死
 ```
+
+### ⚠️ 已知限制：`--headless` 独立运行会卡死
+
+本项目的独立入口 `sz_upload.py` 的流程设计是「填完字段 → 停在保存按钮前 → 等用户手动核对保存 → 关浏览器窗口退出」。无头模式下没有 UI，用户无法关窗口，脚本会**永久卡死在 `pause_for_manual_save()` 循环**。
+
+**真正能无头跑的场景**：通过 `新品上架链` 项目编排（`site_draft.py` 补齐了"点【后台】存草稿 + 搜 ProId"的自动提交闭环）。独立跑必须保持**有头 + 人工核对**。
+
+如需独立无头自动提交草稿：要把 `site_draft.py` 里的闭环逻辑下沉到本项目（未完成，仅在新品上架链里活着）。
 
 ### 输入约定
 

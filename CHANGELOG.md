@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased] - 2026-04-17
+
+### Docs
+- README + memory 补充"已知限制：`--headless` 独立运行会卡死"说明
+- 明确独立入口 `sz_upload.py` 走 `pause_for_manual_save` 等用户关窗，无头场景必须通过「新品上架链」的 `site_draft.py` 调用（补齐了"点【后台】+ 搜 ProId"闭环）
+- 无代码变化，版本号不递增
+
 ## [3.1.0] - 2026-04-14
 
 ### Added
